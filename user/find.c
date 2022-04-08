@@ -51,7 +51,7 @@ find(char *path,char* expression)
 		}
 		strcpy(buf, path);
 		p = buf+strlen(buf);
-		*p++ = '/';
+		if(*(p-1) != '/')*p++ = '/'; //if 特殊处理一下pathname/的情况
 		while(read(fd, &de, sizeof(de)) == sizeof(de)){
 			if(de.inum == 0)
 				continue;
