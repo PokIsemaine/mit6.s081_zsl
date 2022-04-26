@@ -75,11 +75,36 @@ sys_sleep(void)
   return 0;
 }
 
-
+// #define LAB_PGTBL 
 #ifdef LAB_PGTBL
+pte_t * walk(pagetable_t pagetable, uint64 va, int alloc);	//because walk() in vm.c
 int
 sys_pgaccess(void)
 {
+  int len;
+  uint64 base,abits;
+  if(argaddr(0,&base) < 0)
+	return -1;
+  if(argint(1,&len) < 0)
+	return -1;
+  if(argaddr(2, &abits) < 0)
+	return -1;
+  
+  if(len > 32 || len < 0) 
+	return -1;
+  struct proc* p = myproc();
+
+  uint64 mask = 0;
+  for(int i = 0 ; i < len ; ++i) {
+	  uint64 pg = base + i * PGSIZE;
+	  pte_t* pte = walk(p->pagetable, pg ,0);
+	  if(*pte & PTE_A) {
+	    mask |= (1<<i);
+		*pte = (*pte) & (~PTE_A); //clear PTE_A
+	  }
+  }
+  
+  copyout(p->pagetable, abits, (char*)&mask,sizeof(mask));
   // lab pgtbl: your code here.
   return 0;
 }
