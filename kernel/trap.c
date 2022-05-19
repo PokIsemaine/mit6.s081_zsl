@@ -77,8 +77,19 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2) {
+	//   printf("%d %d %d\n",p->alarm_ticks,p->alarm_interval,p->handlerlock);
+	  if(p->alarm_interval != 0) {	//如果设定了时钟事件
+			++(p->alarm_ticks);
+			if(p->alarm_ticks % p->alarm_interval == 0
+				&& p->handlerlock) {
+				p->handlerlock = 0;
+				memmove(p->alarm_trapframe, p->trapframe, sizeof(struct trapframe));
+				p->trapframe->epc = p->handler;
+			}
+		}
     yield();
+  }
 
   usertrapret();
 }
