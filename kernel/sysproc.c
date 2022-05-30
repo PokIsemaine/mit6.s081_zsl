@@ -119,7 +119,7 @@ uint64 sys_sigreturn(void)
 	struct proc* p = myproc();
 	memmove(p->trapframe, p->alarm_trapframe, sizeof(struct trapframe));
 	p->alarm_ticks = 0;
-	// p->alarm_interval = 0;
+	// p->alarm_interval = 0; why?
 	p->handler = 0;
 	p->handlerlock = 1;
 	return 0;
