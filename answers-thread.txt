@@ -1,0 +1,12 @@
+thread1:POINT A ready to put key1 into bucket1
+thread1:POINT B not exist key1
+
+----------schedule------------
+
+thread2:POINT A ready to put key2 into bucket1
+thread2:POINT B not exist key2
+thread2:POINT C insert key2 into bucket1[x]
+
+----------schedule------------
+
+thread2:POINT C insert key1 into bucket1[x]  <--------- key2 missing
