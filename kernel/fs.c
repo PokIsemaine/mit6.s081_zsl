@@ -401,8 +401,38 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
 
+  bn -= NINDIRECT; 
+
+  // 二级间接块的情况
+  if(bn < NDINDIRECT) {
+    int level2_idx = bn / NADDR_PER_BLOCK;  // 要查找的块号位于二级间接块中的位置
+    int level1_idx = bn % NADDR_PER_BLOCK;  // 要查找的块号位于一级间接块中的位置
+    // 读出二级间接块
+    if((addr = ip->addrs[NDIRECT + 1]) == 0)
+      ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+
+    if((addr = a[level2_idx]) == 0) {
+      a[level2_idx] = addr = balloc(ip->dev);
+      // 更改了当前块的内容，标记以供后续写回磁盘
+      log_write(bp);
+    }
+    brelse(bp);
+
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    if((addr = a[level1_idx]) == 0) {
+      a[level1_idx] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelse(bp);
+    return addr;
+  }
+
   panic("bmap: out of range");
 }
+
 
 // Truncate inode (discard contents).
 // Caller must hold ip->lock.
@@ -429,6 +459,26 @@ itrunc(struct inode *ip)
     }
     brelse(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
+    ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1]){
+    bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+    a = (uint*)bp->data;
+    for(j = 0; j < NINDIRECT; j++){
+      if(a[j]) {
+        struct buf *bp2 = bread(ip->dev, a[j]);
+        uint *a2 = (uint*)bp2->data;
+        for(int k = 0; k < NINDIRECT; k++){
+          if(a2[k])
+            bfree(ip->dev, a2[k]);
+        }
+        brelse(bp2);
+        bfree(ip->dev, a[j]);
+      }
+    }
+    brelse(bp);
+    bfree(ip->dev, ip->addrs[NDIRECT+1]);
     ip->addrs[NDIRECT] = 0;
   }
 
